@@ -1,86 +1,62 @@
-# Realtime Multi-Person Pose Estimation
-By [Zhe Cao](https://people.eecs.berkeley.edu/~zhecao/), [Tomas Simon](http://www.cs.cmu.edu/~tsimon/), [Shih-En Wei](https://scholar.google.com/citations?user=sFQD3k4AAAAJ&hl=en), [Yaser Sheikh](http://www.cs.cmu.edu/~yaser/).
+# Openpose-MFV: Human 2D Pose Estimation for MFV
 
-## Introduction
-Code repo for winning 2016 MSCOCO Keypoints Challenge, 2016 ECCV Best Demo Award, and 2017 CVPR Oral paper.  
+Openpose-MFV is a fork of the original [CVPR'17 implementation of Openpose](https://github.com/ZheC/Realtime_Multi-Person_Pose_Estimation) (without hand and facial landmarks) adapted for the 3D motion and force estimator, [MFV](https://www.di.ens.fr/willow/research/motionforcesfromvideo/).
 
-Watch our video result in [YouTube](https://www.youtube.com/watch?v=pW6nZXeWlGM&t=77s) or [our website](http://posefs1.perception.cs.cmu.edu/Users/ZheCao/humanpose.mp4). 
-
-We present a bottom-up approach for realtime multi-person pose estimation, without using any person detector. For more details, refer to our [CVPR'17 paper](https://arxiv.org/abs/1611.08050), our [oral presentation video recording](https://www.youtube.com/watch?v=OgQLDEAjAZ8&list=PLvsYSxrlO0Cl4J_fgMhj2ElVmGR5UWKpB) at CVPR 2017 or our [presentation slides](http://image-net.org/challenges/talks/2016/Multi-person%20pose%20estimation-CMU.pdf) at ILSVRC and COCO workshop 2016.
-
-<p align="left">
-<img src="https://github.com/ZheC/Multi-Person-Pose-Estimation/blob/master/readme/dance.gif", width="720">
-</p>
-
-<p align="left">
-<img src="https://github.com/ZheC/Multi-Person-Pose-Estimation/blob/master/readme/shake.gif", width="720">
-</p>
-
-This project is licensed under the terms of the [license](LICENSE).
-
-## Other Implementations
-Thank you all for the efforts! If you have new implementation and want to share with others, feel free to make a pull request or email me! 
-- Our new C++ library [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) (testing only)
-- Tensorflow [[version 1]](https://github.com/michalfaber/keras_Realtime_Multi-Person_Pose_Estimation) | [[version 2]](https://github.com/ildoonet/tf-openpose) | [[version 3]](https://github.com/raymon-tian/keras_Realtime_Multi-Person_Pose_Estimation)
-- Pytorch [[version 1]](https://github.com/tensorboy/pytorch_Realtime_Multi-Person_Pose_Estimation) | [[version 2]](https://github.com/last-one/Pytorch_Realtime_Multi-Person_Pose_Estimation)
-- Chainer [[version 1]](https://github.com/DeNA/Chainer_Realtime_Multi-Person_Pose_Estimation)
-- MXnet [[version 1]](https://github.com/dragonfly90/mxnet_Realtime_Multi-Person_Pose_Estimation)
-- MatConvnet [[version 1]](https://github.com/coocoky/matconvnet_Realtime_Multi-Person_Pose_Estimation)
+![Example output video](https://github.com/zongmianli/Realtime_Multi-Person_Pose_Estimation/blob/master/testing/python/example_output.gif)
 
 
-## Contents
-1. [Testing](#testing)
-2. [Training](#training)
-3. [Citation](#citation)
+Comparing with the original version, this new version has the following major changes in the testing code:
+- **An easy interface** for testing on multiple images and/or videos.
+- **A revised bottom-up parsing step** which is adapted for object manipulation scenarios in instructional videos:
+   - We assume that there is **a single human subject** in the input video/image. When multiple people are detected, only the most confident human body will be perserved — all the other human instances will be ignored.
+   - Due to occlusion with the manipulated object, the predicted Fart Affinity Fields (PAFs) may not be correct. As a result, some joints (for example, hand, ankle) of the detected human subject will be missing or associated to wrong people (who are ignored eventually). 
+   To deal with this case, we always associate the most confident joint detection to the output human 2D skeleton.
 
-## Testing
+## Testing on still images
+The following scripts detect images (with extension `.jpg` or `.png`) under the `input_dir` directory and run Openpose-MFV on the detected images.
+Visualization images and estimated 2D joint locations are saved in `vis_dir` and `save_path`, respectively.
+```terminal
+$ cd testing/python
+$ input_dir=path/to/target_folder
+$ vis_dir=${input_dir}/Openpose-MFV
+$ save_path=${input_dir}/Openpose-MFV/person_2d_joints.pkl
+$ python main.py ${input_dir} ${vis_dir} ${save_path}
+```
 
-### C++ (realtime version, for demo purpose)
-- In May 2017, we released an updated library: [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
-- Old modified caffe version (not maintained anymore, please use OpenPose instead): [caffe_rtpose](https://github.com/CMU-Perceptual-Computing-Lab/caffe_demo/). Follow the instruction on that repo. 
-- Three input options: images, video, webcam
+## Testing on videos
+Suppose we have a folder containing videos and we wish to do a forward pass on all the videos in a frame-by-frame manner to obtain an estimate of the 2D trajectory of human joints.
 
-### Matlab (slower, for COCO evaluation)
-- Compatible with general [Caffe](http://caffe.berkeleyvision.org/). Compile matcaffe. 
-- Run `cd testing; get_model.sh` to retrieve our latest MSCOCO model from our web server.
-- Change the caffepath in the `config.m` and run `demo.m` for an example usage.
+### Convert videos to image sequences
+First, convert the input videos to individual frames and save the frame images under folders with video names. Taking the Handtool dataset as an example, we expect the following folder sturcture:
+```terminal
+$ image_folder=path/to/Handtool-dataset/frames
+$ ls ${image_folder}
+barbell_1	hammer_1	scythe_1	spade_1
+barbell_2	hammer_2	scythe_2	spade_2
+barbell_3	hammer_3	scythe_3	spade_3
+barbell_4	hammer_4	scythe_4	spade_4
+barbell_5	hammer_5	scythe_5	spade_5
+$ ls ${videos_dir}/barbell_1/
+0001.png	0002.png	0003.png	...
+```
+Namely, we expect an `image_folder` containing several subfolders of frame images. 
+Under each subfolder, e.g. barbell_1, are saved the frame images corresponding to an input video.
 
-### Python
-- `cd testing/python`
-- `ipython notebook`
-- Open `demo.ipynb` and execute the code
+### Generate `data_info.pkl` for the `image_folder`
+```terminal
+$ cd testing/python
+$ python helpers/create_data_info.py ${image_folder} --image_types="png,jpg" --save_info
+```
+### Run Openpose-MFV on the `image_folder`
+```terminal
+$ cd testing/python
+$ vis_folder=path/to/Handtool-dataset/Openpose-MFV
+$ save_path=${vis_folder}/person_2d_joints.pkl
+$ python run_imagefolder.py ${image_folder} ${vis_folder} ${save_path}
+```
 
-## Training
+## Testing on a mixture of images and videos
+To run Openpose-MFV on a mixture of still images and video frames, it is sufficient put video frames as subfolders in `image_folder` and still images directly under `image_folder`.
+Then follow exactly the same steps described in "Testing on videos".
 
-### Network Architecture
-![Teaser?](https://github.com/ZheC/Multi-Person-Pose-Estimation/blob/master/readme/arch.png)
-
-### Training Steps 
-- Run `cd training; bash getData.sh` to obtain the COCO images in `dataset/COCO/images/`, keypoints annotations in `dataset/COCO/annotations/` and [COCO official toolbox](https://github.com/pdollar/coco) in `dataset/COCO/coco/`. 
-- Run `getANNO.m` in matlab to convert the annotation format from json to mat in `dataset/COCO/mat/`.
-- Run `genCOCOMask.m` in matlab to obatin the mask images for unlabeled person. You can use 'parfor' in matlab to speed up the code.
-- Run `genJSON('COCO')` to generate a json file in `dataset/COCO/json/` folder. The json files contain raw informations needed for training.
-- Run `python genLMDB.py` to generate your LMDB. (You can also download our LMDB for the COCO dataset (189GB file) by: `bash get_lmdb.sh`)
-- Download our modified caffe: [caffe_train](https://github.com/CMU-Perceptual-Computing-Lab/caffe_train). Compile pycaffe. It will be merged with caffe_rtpose (for testing) soon.
-- Run `python setLayers.py --exp 1` to generate the prototxt and shell file for training.
-- Download [VGG-19 model](https://gist.github.com/ksimonyan/3785162f95cd2d5fee77), we use it to initialize the first 10 layers for training.
-- Run `bash train_pose.sh 0,1` (generated by setLayers.py) to start the training with two gpus. 
-
-## Citation
-Please cite the paper in your publications if it helps your research:
-
-    
-    
-    @inproceedings{cao2017realtime,
-      author = {Zhe Cao and Tomas Simon and Shih-En Wei and Yaser Sheikh},
-      booktitle = {CVPR},
-      title = {Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields},
-      year = {2017}
-      }
-	  
-    @inproceedings{wei2016cpm,
-      author = {Shih-En Wei and Varun Ramakrishna and Takeo Kanade and Yaser Sheikh},
-      booktitle = {CVPR},
-      title = {Convolutional pose machines},
-      year = {2016}
-      }
+This feature is handy for collecting data (both still images and video clips) for training the contact recognizer for MFV.
