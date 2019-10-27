@@ -24,14 +24,27 @@ if __name__ == '__main__':
     parser.add_argument(
         'save_path', type=str, metavar='DIR',
         help='Location of the output 2D joint locations.')
+    parser.add_argument(
+        "--item-start", type=int, default=1,
+        help="Run program from item #.")
+    parser.add_argument(
+        "--item-end", type=int, default=-1,
+        help="Stop program at item # (the very last item by default).")
+    parser.add_argument(
+        "--save-after-each-iteration", default=False, action="store_true",
+        help="Save the output data_dict after each iteration over (video) items."
+        "Otherwise the data_dict will not be saved until all items are computed.")
+
     args = parser.parse_args()
     image_folder = args.image_folder
     vis_folder = args.vis_folder
     save_path = args.save_path
+    item_start = args.item_start
+    item_end = args.item_end
+    save_after_each_iteration = args.save_after_each_iteration
 
     # ------------------------------------------------------------
-    # Load data info
-    # ------------------------------------------------------------
+    # Load useful information
 
     print("Loading image folder info from {0:s} ...".format(
         join(image_folder, "data_info.pkl")))
@@ -43,13 +56,27 @@ if __name__ == '__main__':
         item_to_image = data_info["item_to_image"]
         #image_to_itemframe = data_info["image_to_itemframe"]
 
+    # Check item_start and item_end
+    nitems = len(item_names)
+    if not 1<=item_start<=nitems:
+        print("Check failed: 1<=item_start<=nitems (1<={0:d}<={1:d})".format(item_start, nitems))
+    if item_end == -1:
+        item_end = nitems
+    elif not 1<=item_end<=nitems:
+        print("Check failed: 1<=item_end<=nitems (1<={0:d}<={1:d})".format(item_end, nitems))
+
+    if not exists(dirname(save_path)):
+        makedirs(dirname(save_path))
+
+
     # ------------------------------------------------------------
     # Run Openpose on each of the items (i.e., video frames and
     # individual images) within image_folder
-    # ------------------------------------------------------------
 
-    save_dict = dict()
-    for i,item_name in enumerate(item_names):
+    results_dict = dict()
+
+    for i in range(item_start-1, item_end):
+        item_name = item_names[i]
         print("  Running Openpose on item #{0:d}: {1:s} ...".format(i, item_name))
         item_length = item_lengths[i]
 
@@ -63,8 +90,22 @@ if __name__ == '__main__':
         else: # individual images
             vis_dir = vis_folder
 
-        save_dict[item_name] = main(image_paths, vis_dir, save_path=None)
+        results = main(image_paths, vis_dir, save_path=None)
 
-    # Save estimated joint 2D positions
-    with open(save_path, 'w') as f:
-        pk.dump(save_dict, f)
+        # Save estimated joint 2D positions
+        results_dict[item_name] = results
+
+        if save_after_each_iteration:
+            if exists(save_path):
+                with open(save_path, 'r') as f:
+                    data = pk.load(f)
+                    data[item_name] = results
+            else:
+                data = {item_name: results}
+
+            with open(save_path, 'w') as f:
+                pk.dump(data, f)
+
+    if not save_after_each_iteration:
+        with open(save_path, 'w') as f:
+            pk.dump(results_dict, f)

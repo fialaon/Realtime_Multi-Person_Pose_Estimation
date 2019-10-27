@@ -51,8 +51,8 @@ $ python helpers/create_data_info.py ${image_folder} --image_types="png,jpg" --s
 ```terminal
 $ cd testing/python
 $ vis_folder=path/to/Handtool-dataset/Openpose-MFV
-$ save_path=${vis_folder}/person_2d_joints.pkl
-$ python run_imagefolder.py ${image_folder} ${vis_folder} ${save_path}
+$ save_path=${vis_folder}/Openpose-MFV.pkl
+$ python run_imagefolder.py ${image_folder} ${vis_folder} ${save_path} --save-after-each-iteration
 ```
 
 ## Testing on a mixture of images and videos
