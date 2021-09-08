@@ -2,7 +2,7 @@ import argparse
 import cv2 as cv
 import numpy as np
 import numpy.linalg as LA
-import cPickle as pk
+import pickle as pk
 from os import makedirs, remove
 from os.path import join, exists, abspath, dirname, basename, isfile
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     print("Loading image folder info from {0:s} ...".format(
         join(image_folder, "data_info.pkl")))
-    with open(join(image_folder, "data_info.pkl"), 'r') as f:
+    with open(join(image_folder, "data_info.pkl"), 'rb') as f:
         data_info = pk.load(f)
         image_names = data_info["image_names"]
         item_names = data_info["item_names"]
@@ -97,15 +97,15 @@ if __name__ == '__main__':
 
         if save_after_each_iteration:
             if exists(save_path):
-                with open(save_path, 'r') as f:
+                with open(save_path, 'rb') as f:
                     data = pk.load(f)
                     data[item_name] = results
             else:
                 data = {item_name: results}
 
-            with open(save_path, 'w') as f:
-                pk.dump(data, f)
+            with open(save_path, 'wb') as f:
+                pk.dump(data, f, protocol=2)
 
     if not save_after_each_iteration:
-        with open(save_path, 'w') as f:
-            pk.dump(results_dict, f)
+        with open(save_path, 'wb') as f:
+            pk.dump(results_dict, f, protocol=2)
