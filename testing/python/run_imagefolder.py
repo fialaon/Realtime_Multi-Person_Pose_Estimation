@@ -91,6 +91,7 @@ if __name__ == '__main__':
             vis_dir = vis_folder
 
         results = main(image_paths, vis_dir, save_path=None)
+        
 
         # Save estimated joint 2D positions
         results_dict[item_name] = results

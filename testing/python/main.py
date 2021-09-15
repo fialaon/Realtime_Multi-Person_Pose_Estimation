@@ -112,7 +112,8 @@ def main(image_paths, vis_dir, save_path=None):
 
             all_peaks.append(peaks_with_score_and_id)
             peak_counter += len(peaks)
-
+        #print(f'in total {len(all_peaks)} peaks')
+        #print(all_peaks)
         # ------------------------------------------------------------
         # Define links
         # ------------------------------------------------------------
@@ -138,6 +139,7 @@ def main(image_paths, vis_dir, save_path=None):
             score_mid = paf_avg[:,:,[x-19 for x in mapIdx[k]]]
             candA = all_peaks[limbSeq[k][0]-1]
             candB = all_peaks[limbSeq[k][1]-1]
+            #print(f'A: {candA}, B: {candB}')
             nA = len(candA)
             nB = len(candB)
             indexA, indexB = limbSeq[k]
@@ -190,9 +192,10 @@ def main(image_paths, vis_dir, save_path=None):
         # Second last number in each row is the score of the overall configuration
         subset = -1 * np.ones((0, 20))
         candidate = np.array([item for sublist in all_peaks for item in sublist])
-
+        #print(f'special k {special_k}')
         for k in range(len(mapIdx)):
             if k not in special_k:
+                #print(f' im inside! at {k}')
                 partAs = connection_all[k][:,0]
                 partBs = connection_all[k][:,1]
                 indexA, indexB = np.array(limbSeq[k]) - 1
@@ -300,7 +303,7 @@ def main(image_paths, vis_dir, save_path=None):
                     removed_joints.append(i)
                 else:
                     joints_2d[img_id][i] = joint_position
-
+        #print(f'removed_joints {removed_joints}')
         # ------------------------------------------------------------
         # Draw estimated joints on input images
         # ------------------------------------------------------------
@@ -328,6 +331,7 @@ def main(image_paths, vis_dir, save_path=None):
                     # Draw smaller circles for facial landmarks than other body joints
                     csize = 3 if i in facial_landmarks else 5
                     cv.circle(canvas, all_peaks[i][j][0:2], csize, colors[i], thickness=-1)
+
 
         # ------------------------------------------------------------
         # Draw links (or "limbs")
@@ -363,6 +367,7 @@ def main(image_paths, vis_dir, save_path=None):
     # ------------------------------------------------------------
     # Optionally, save joint locations to file
     # ------------------------------------------------------------
+    #print(f'joints_2d {joints_2d}')
     if save_path is not None:
         data_dict = {
             "joint_2d_positions": joints_2d,
